@@ -1,0 +1,50 @@
+name: 'Terraform'
+
+on:
+  push:
+    branches: [ 'main', 'dta' ]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  terraform:
+    name: 'Terraform Deployment'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+
+    environment:
+      name: ${{ (github.ref == 'refs/heads/main') && 'prd' || 'dta' }}
+
+    env:
+      AWS_REGION: us-east-1
+      ENV_DIR: ${{ (github.ref == 'refs/heads/main') && 'prd' || 'dta' }}
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v1
+
+    - name: Terraform Format Check
+      run: make fmt-check
+
+    - name: Terraform Init
+      run: make init
+
+    - name: Terraform Plan
+      run: make plan
+
+    - name: Terraform Apply
+      run: make apply
